@@ -12,6 +12,7 @@ import { setupErrorHandling } from "./utils/error-handling.js";
 import { logger } from "./utils/logging.js";
 import { validateConfig } from "./config/validation.js";
 import { loadConfig } from './config/index.js';
+import { FileTransferManager, fileTransferToolDefinitions } from './tools/file-transfer.js';
 import { registerSyncUpdateTool } from './tools/sync-update.js';
 import ignore from 'ignore';
 import * as fs from 'fs/promises';
@@ -19,6 +20,7 @@ import * as path from 'path';
 
 class GiteaMcpServer {
   private server: Server;
+  private fileTransfer = new FileTransferManager();
 
   constructor() {
     this.server = new Server({
@@ -249,7 +251,8 @@ class GiteaMcpServer {
             },
             required: ['instanceId', 'owner', 'repository', 'files', 'message']
           }
-        }
+        },
+        ...fileTransferToolDefinitions
       ]
     }));
 
@@ -265,6 +268,9 @@ class GiteaMcpServer {
         return await this.handleSyncProject(args);
       } else if (name === 'sync_update') {
         return await this.handleSyncUpdate(args);
+      } else if (this.fileTransfer.handles(name)) {
+        const config = loadConfig();
+        return await this.fileTransfer.handle(name, args, config.gitea.instances);
       } else {
         throw new McpError(
           ErrorCode.MethodNotFound,
