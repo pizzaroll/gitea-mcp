@@ -82,7 +82,8 @@ export class FileRepository implements Repository {
     check(parts.length <= 64, 'INVALID_PATH', 'Path depth exceeds limit');
     const root = await this.commit(target.owner, target.repository, oid(commit));
     check(oid(root.sha) === commit, 'INVALID_GITEA_RESPONSE', 'Resolved source commit differs');
-    let tree = oid(object(root.tree).sha), blob = '';
+    // Gitea wraps raw commit metadata in `commit`; the immutable tree is nested.
+    let tree = oid(object(object(root.commit).tree).sha), blob = '';
     // Walk immutable trees. Never follow symlinks, including parent components, or gitlinks.
     for (let depth = 0; depth < parts.length; depth++) {
       let entry: Record<string, unknown> | undefined;

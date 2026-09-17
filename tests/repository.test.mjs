@@ -7,8 +7,8 @@ const commit = 'a'.repeat(40), rootTree = 'b'.repeat(40), subTree = 'c'.repeat(4
 async function fixture(t, overrides = {}) {
   const bytes = Buffer.from('one\r\ntwo\x00'), blobSHA = blob(bytes), requests = [];
   const responses = {
-    '/api/v1/repos/alice/sandbox/git/commits/work': { sha: commit, tree: { sha: rootTree }, parents: [] },
-    [`/api/v1/repos/alice/sandbox/git/commits/${commit}`]: { sha: commit, tree: { sha: rootTree }, parents: [] },
+    '/api/v1/repos/alice/sandbox/git/commits/work': { sha: commit, commit: { tree: { sha: rootTree } }, parents: [] },
+    [`/api/v1/repos/alice/sandbox/git/commits/${commit}`]: { sha: commit, commit: { tree: { sha: rootTree } }, parents: [] },
     '/api/v1/repos/alice/sandbox/branches/work': { commit: { id: commit } },
     [`/api/v1/repos/alice/sandbox/git/trees/${rootTree}`]: { tree: [{ path: 'src', type: 'tree', mode: '040000', sha: subTree }], truncated: false },
     [`/api/v1/repos/alice/sandbox/git/trees/${subTree}`]: { tree: [{ path: 'file.ts', type: 'blob', mode: '100644', sha: blobSHA }], truncated: false },
@@ -59,5 +59,12 @@ test('Gitea redirects are not followed and errors do not leak credentials', asyn
   await assert.rejects(f.repo.head('alice', 'sandbox', 'work'), e => {
     assert.equal(e.code, 'GITEA_UNAVAILABLE'); assert.ok(!String(e).includes('unit-test-secret')); return true;
   });
+  assert.equal(f.requests.length, 1);
+});
+
+test('Gitea adapter requires the nested commit tree returned by its API', async t => {
+  const f = await fixture(t);
+  f.responses[`/api/v1/repos/alice/sandbox/git/commits/${commit}`] = { sha: commit, tree: { sha: rootTree }, parents: [] };
+  await assert.rejects(f.repo.read(target, commit), { code: 'INVALID_INPUT' });
   assert.equal(f.requests.length, 1);
 });
