@@ -7,3 +7,4 @@ file-transfer-state/
 .env
 .env.*
 !.env.example
+*.tsbuildinfo
