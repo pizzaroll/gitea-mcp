@@ -1,0 +1,103 @@
+name: Bootstrap file-transfer integration
+
+on:
+  push:
+    branches:
+      - feature/mcp-file-transfer
+    paths:
+      - .github/workflows/bootstrap-file-transfer.yml
+
+permissions:
+  contents: write
+
+jobs:
+  integrate-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/mcp-file-transfer
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Register file-transfer tools
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/index.ts')
+          data = path.read_bytes()
+          nl = b'\r\n' if b'\r\n' in data else b'\n'
+
+          def lines(*items):
+              return nl.join(item.encode() for item in items) + nl
+
+          def replace_once(old, new, label):
+              global data
+              count = data.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected exactly one match, found {count}')
+              data = data.replace(old, new, 1)
+
+          old = lines("import { loadConfig } from './config/index.js';")
+          new = lines(
+              "import { loadConfig } from './config/index.js';",
+              "import { FileTransferManager, fileTransferToolDefinitions } from './tools/file-transfer.js';"
+          )
+          replace_once(old, new, 'file-transfer import')
+
+          old = lines('class GiteaMcpServer {', '  private server: Server;')
+          new = lines('class GiteaMcpServer {', '  private server: Server;', '  private fileTransfer = new FileTransferManager();')
+          replace_once(old, new, 'manager property')
+
+          old = lines(
+              "            required: ['instanceId', 'owner', 'repository', 'files', 'message']",
+              '          }',
+              '        }',
+              '      ]'
+          )
+          new = lines(
+              "            required: ['instanceId', 'owner', 'repository', 'files', 'message']",
+              '          }',
+              '        },',
+              '        ...fileTransferToolDefinitions',
+              '      ]'
+          )
+          replace_once(old, new, 'tool definitions')
+
+          old = lines(
+              "      } else if (name === 'sync_update') {",
+              '        return await this.handleSyncUpdate(args);',
+              '      } else {'
+          )
+          new = lines(
+              "      } else if (name === 'sync_update') {",
+              '        return await this.handleSyncUpdate(args);',
+              '      } else if (this.fileTransfer.handles(name)) {',
+              '        const config = loadConfig();',
+              '        return await this.fileTransfer.handle(name, args, config.gitea.instances);',
+              '      } else {'
+          )
+          replace_once(old, new, 'tool dispatch')
+
+          path.write_bytes(data)
+          PY
+      - name: Install dependencies
+        run: npm ci
+      - name: Run tests
+        run: npm test -- --run
+      - name: Build TypeScript
+        run: npm run build
+      - name: Check diff hygiene
+        run: git diff --check
+      - name: Commit integration
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/index.ts
+          git commit -m "Register exact file transfer tools"
+          git push origin HEAD:feature/mcp-file-transfer
