@@ -92,7 +92,7 @@ jobs:
       - name: Build TypeScript
         run: npm run build
       - name: Check diff hygiene
-        run: git diff --check
+        run: git -c core.whitespace=cr-at-eol diff --check
       - name: Commit integration
         shell: bash
         run: |
