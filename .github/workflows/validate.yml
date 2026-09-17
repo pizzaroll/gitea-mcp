@@ -25,9 +25,34 @@ jobs:
       - run: npm run type-check
       - run: npm run build
       - name: Test
-        run: npm test -- --run --passWithNoTests
+        run: npm test
       - name: Python patch helper tests
         run: |
           if [ -f tools/test_make_change.py ]; then
             python3 -m unittest discover -s tools -p 'test_*.py' -v
           fi
+      - name: Start disposable Gitea (no production credentials)
+        run: |
+          docker run -d --name gitea-file-transfer-test -p 127.0.0.1:3000:3000 \
+            -e GITEA__security__INSTALL_LOCK=true \
+            -e GITEA__database__DB_TYPE=sqlite3 \
+            -e GITEA__server__ROOT_URL=http://127.0.0.1:3000/ \
+            -e GITEA__server__OFFLINE_MODE=true \
+            -e GITEA__service__DISABLE_REGISTRATION=true \
+            docker.gitea.com/gitea:1.24.6
+          for n in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:3000/api/v1/version; then break; fi
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:3000/api/v1/version
+          docker exec --user git gitea-file-transfer-test \
+            gitea --config /data/gitea/conf/app.ini admin user create \
+            --username mcp-test --password 'Integration-only-123!' \
+            --email mcp-test@example.invalid --admin --must-change-password=false
+      - name: Live Gitea API integration
+        env:
+          GITEA_TEST_URL: http://127.0.0.1:3000
+        run: npm run test:integration
+      - name: Stop disposable Gitea
+        if: always()
+        run: docker rm -f gitea-file-transfer-test || true

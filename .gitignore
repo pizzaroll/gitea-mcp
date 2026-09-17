@@ -1,0 +1,9 @@
+node_modules/
+build/
+coverage/
+__pycache__/
+*.pyc
+file-transfer-state/
+.env
+.env.*
+!.env.example

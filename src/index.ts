@@ -13,6 +13,7 @@ import { logger } from "./utils/logging.js";
 import { validateConfig } from "./config/validation.js";
 import { loadConfig } from './config/index.js';
 import { registerSyncUpdateTool } from './tools/sync-update.js';
+import { fileTransferTools, fileTransferRuntime } from './file-transfer/tools.js';
 import ignore from 'ignore';
 import * as fs from 'fs/promises';
 import * as path from 'path';
@@ -31,6 +32,7 @@ class GiteaMcpServer {
     });
 
     this.setupToolHandlers();
+    this.server.onclose = () => { void fileTransferRuntime.close(); };
     
     // Error handling
     this.server.onerror = (error) => {
@@ -42,6 +44,7 @@ class GiteaMcpServer {
     // Register available tools
     this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
       tools: [
+        ...fileTransferTools,
         {
           name: 'create_repository',
           description: 'Create a new repository on Gitea instance',
@@ -256,6 +259,8 @@ class GiteaMcpServer {
     // Handle tool calls
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const { name, arguments: args } = request.params;
+
+      if (fileTransferRuntime.handles(name)) return fileTransferRuntime.call(name, args);
 
       if (name === 'create_repository') {
         return await this.handleCreateRepository(args);
@@ -1186,11 +1191,13 @@ async function main() {
 // Handle graceful shutdown
 process.on('SIGTERM', async () => {
   logger.info('Received SIGTERM, shutting down gracefully');
+  await fileTransferRuntime.close();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
   logger.info('Received SIGINT, shutting down gracefully');
+  await fileTransferRuntime.close();
   process.exit(0);
 });
 
