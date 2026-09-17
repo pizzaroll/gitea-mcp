@@ -1,0 +1,33 @@
+name: Validate
+on:
+  push:
+    branches: [main, 'feat/**']
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Source snapshot
+        run: tar --exclude=.git --exclude=node_modules --exclude=source.tar.gz -czf /tmp/source.tar.gz .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: source-snapshot
+          path: /tmp/source.tar.gz
+          retention-days: 7
+      - run: npm ci
+      - run: npm run type-check
+      - run: npm run build
+      - name: Test
+        run: npm test -- --run --passWithNoTests
+      - name: Python patch helper tests
+        run: |
+          if [ -f tools/test_make_change.py ]; then
+            python3 -m unittest discover -s tools -p 'test_*.py' -v
+          fi
