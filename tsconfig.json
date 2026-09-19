@@ -12,9 +12,15 @@
     "resolveJsonModule": true,
     "declaration": true,
     "sourceMap": true,
-    "incremental": true,
+    "incremental": false,
     "allowSyntheticDefaultImports": true
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "build", "tests"]
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "build",
+    "tests"
+  ]
 }

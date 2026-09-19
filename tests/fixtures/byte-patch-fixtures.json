@@ -1,0 +1,110 @@
+[
+  {
+    "name": "crlf",
+    "before": "YQ0KYg0KYw0K",
+    "after": "YQ0KQg0KYw0K",
+    "patch": {
+      "format": "gitea-byte-patch-v1",
+      "source_sha256": "a21249681e0ce22432ba07ba61791651dffb68e3779d3bd3c1b0348035f23328",
+      "result_sha256": "301f6bd307377e2edefbe991f82a21e6925b772a60418cc16db1f516185bef19",
+      "operations": [
+        {
+          "offset": 3,
+          "delete_bytes": 3,
+          "expected_sha256": "679e273f78fc8f8ba114db23c2dce80cc77c91083939825ca830152f2f080d08",
+          "data_base64": "Qg0K"
+        }
+      ]
+    }
+  },
+  {
+    "name": "bom",
+    "before": "77u/aW50IHggPSAwOw==",
+    "after": "77u/aW50IHggPSAxOw==",
+    "patch": {
+      "format": "gitea-byte-patch-v1",
+      "source_sha256": "8355fdc3861252816597ca9ac49231daeb99bceffdcccfc10fd36cf4e0cb648e",
+      "result_sha256": "f31f5e1d50f486e40ee5b6ec44062643b38c3cd0909a1129b2b43b282483c1f7",
+      "operations": [
+        {
+          "offset": 0,
+          "delete_bytes": 13,
+          "expected_sha256": "8355fdc3861252816597ca9ac49231daeb99bceffdcccfc10fd36cf4e0cb648e",
+          "data_base64": "77u/aW50IHggPSAxOw=="
+        }
+      ]
+    }
+  },
+  {
+    "name": "unicode",
+    "before": "YfCfmIBiCmZpcnN0Cmxhc3Q=",
+    "after": "Yc6pYgpzZWNvbmQKbGFzdA==",
+    "patch": {
+      "format": "gitea-byte-patch-v1",
+      "source_sha256": "0b83e3e98c20ad037d272b47e1ba5f205ab696960d59c58ca33ac8a90ae02eab",
+      "result_sha256": "0ea3f54050d630fb244287dca1d8ac5263a8a2e74d857090ef6b4d67347af581",
+      "operations": [
+        {
+          "offset": 0,
+          "delete_bytes": 13,
+          "expected_sha256": "6a91b2870b749e0e0c3576dda0c9f0a1c24fca40f4c7ce06c32eaeff423bab40",
+          "data_base64": "Yc6pYgpzZWNvbmQK"
+        }
+      ]
+    }
+  },
+  {
+    "name": "binary",
+    "before": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7/P3+/w==",
+    "after": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn8A/1BBVENIgIGCg4SFhoeIiYqLjI2Oj5CRkpOUlZaXmJmam5ydnp+goaKjpKWmp6ipqqusra6vsLGys7S1tre4ubq7vL2+v8DBwsPExcbHyMnKy8zNzs/Q0dLT1NXW19jZ2tvc3d7f4OHi4+Tl5ufo6err7O3u7/Dx8vP09fb3+Pn6+/z9/v8=",
+    "patch": {
+      "format": "gitea-byte-patch-v1",
+      "source_sha256": "40aff2e9d2d8922e47afd4648e6967497158785fbd1da870e7110266bf944880",
+      "result_sha256": "4cc40a5eede32d87e6ae67a2e5b59ecf156364e1eb8cf072339b4ab6c6bddd7d",
+      "operations": [
+        {
+          "offset": 14,
+          "delete_bytes": 242,
+          "expected_sha256": "1bf16e489af83f2f5528bc93f3442f5dadaf1abf6b01e04a2d81ba8e2f13613c",
+          "data_base64": "Dg8QERITFBUWFxgZGhscHR4fICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj9AQUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVpbXF1eX2BhYmNkZWZnaGlqa2xtbm9wcXJzdHV2d3h5ent8fX5/AP9QQVRDSICBgoOEhYaHiImKi4yNjo+QkZKTlJWWl5iZmpucnZ6foKGio6SlpqeoqaqrrK2ur7CxsrO0tba3uLm6u7y9vr/AwcLDxMXGx8jJysvMzc7P0NHS09TV1tfY2drb3N3e3+Dh4uPk5ebn6Onq6+zt7u/w8fLz9PX29/j5+vv8/f7/"
+        }
+      ]
+    }
+  },
+  {
+    "name": "empty-source",
+    "before": "",
+    "after": "bmV3",
+    "patch": {
+      "format": "gitea-byte-patch-v1",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "result_sha256": "11507a0e2f5e69d5dfa40a62a1bd7b6ee57e6bcd85c67c9b8431b36fff21c437",
+      "operations": [
+        {
+          "offset": 0,
+          "delete_bytes": 0,
+          "expected_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "data_base64": "bmV3"
+        }
+      ]
+    }
+  },
+  {
+    "name": "empty-result",
+    "before": "b2xk",
+    "after": "",
+    "patch": {
+      "format": "gitea-byte-patch-v1",
+      "source_sha256": "cba06b5736faf67e54b07b561eae94395e774c517a7d910a54369e1263ccfbd4",
+      "result_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "operations": [
+        {
+          "offset": 0,
+          "delete_bytes": 3,
+          "expected_sha256": "cba06b5736faf67e54b07b561eae94395e774c517a7d910a54369e1263ccfbd4",
+          "data_base64": ""
+        }
+      ]
+    }
+  }
+]

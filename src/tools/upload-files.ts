@@ -7,59 +7,15 @@ import { loadConfig } from '../config/index.js';
 export async function registerUploadFilesTool(server: McpServer) {
   server.tool(
     'upload_files',
+    'Upload files and folders to Gitea repository while preserving directory structure',
     {
-      description: 'Upload files and folders to Gitea repository while preserving directory structure',
-      parameters: {
-        type: 'object',
-        properties: {
-          instanceId: {
-            type: 'string',
-            description: 'Gitea instance identifier'
-          },
-          owner: {
-            type: 'string',
-            description: 'Repository owner'
-          },
-          repository: {
-            type: 'string',
-            description: 'Repository name'
-          },
-          files: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                path: {
-                  type: 'string',
-                  description: 'File path in repository'
-                },
-                content: {
-                  type: 'string',
-                  description: 'File content (text or base64)'
-                }
-              },
-              required: ['path', 'content']
-            },
-            minItems: 1,
-            description: 'Array of files to upload'
-          },
-          message: {
-            type: 'string',
-            description: 'Commit message'
-          },
-          branch: {
-            type: 'string',
-            default: 'main',
-            description: 'Target branch'
-          },
-          batchSize: {
-            type: 'number',
-            default: 10,
-            description: 'Batch size for uploads'
-          }
-        },
-        required: ['instanceId', 'owner', 'repository', 'files', 'message']
-      }
+      instanceId: z.string().describe('Gitea instance identifier'),
+      owner: z.string().describe('Repository owner'),
+      repository: z.string().describe('Repository name'),
+      files: z.array(z.object({ path: z.string(), content: z.string() })).min(1),
+      message: z.string().describe('Commit message'),
+      branch: z.string().default('main'),
+      batchSize: z.number().default(10),
     },
     async (args) => {
       try {
