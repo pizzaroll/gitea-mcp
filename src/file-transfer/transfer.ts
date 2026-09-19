@@ -1,7 +1,7 @@
 import { lookup } from 'node:dns/promises';
 import { BlockList, isIP } from 'node:net';
 import { request as httpsRequest } from 'node:https';
-import { createServer, type Server } from 'node:http';
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { check, FileChangeError, MAX_FILE, MAX_UPLOAD, object, sha256, text } from './core.js';
 import { newID } from './store.js';
 
@@ -88,19 +88,24 @@ export class ArtifactServer implements Artifacts {
     check(url.protocol === 'https:' && !url.username && !url.password && !url.search && !url.hash &&
       !/%|\.\./.test(url.pathname), 'INVALID_CONFIG', 'FILE_TRANSFER_PUBLIC_URL must be a clean public HTTPS URL');
     this.publicURL = url.toString().replace(/\/$/, ''); this.prefix = `${url.pathname.replace(/\/$/, '')}/`;
-    this.server = createServer((req, res) => {
-      res.setHeader('Cache-Control', 'no-store'); res.setHeader('X-Content-Type-Options', 'nosniff');
-      res.setHeader('Referrer-Policy', 'no-referrer');
-      const raw = req.url ?? '', id = raw.startsWith(this.prefix) ? raw.slice(this.prefix.length) : '';
-      this.gc(); const item = /^[a-f0-9]{64}$/.test(id) ? this.entries.get(id) : undefined;
-      if (!['GET', 'HEAD'].includes(req.method ?? '')) { res.writeHead(405); res.end(); return; }
-      if (!item) { res.writeHead(404); res.end(); return; }
-      res.setHeader('Content-Type', 'application/octet-stream');
-      res.setHeader('Content-Disposition', `attachment; filename="${item.name}"`);
-      res.setHeader('Content-Length', item.bytes.length);
-      res.writeHead(200); res.end(req.method === 'HEAD' ? undefined : item.bytes);
-    });
+    this.server = createServer((req, res) => { if (!this.handleRequest(req, res)) { res.writeHead(404); res.end(); } });
     this.server.headersTimeout = 10000; this.server.requestTimeout = 15000; this.server.maxConnections = 32;
+  }
+  handleRequest(req: IncomingMessage, res: ServerResponse): boolean {
+    const raw = req.url ?? '';
+    if (!raw.startsWith(this.prefix)) return false;
+    res.setHeader('Cache-Control', 'no-store'); res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Referrer-Policy', 'no-referrer');
+    const id = raw.slice(this.prefix.length);
+    this.gc(); const item = /^[a-f0-9]{64}$/.test(id) ? this.entries.get(id) : undefined;
+    if (!['GET', 'HEAD'].includes(req.method ?? '')) {
+      res.setHeader('Allow', 'GET, HEAD'); res.writeHead(405); res.end(); return true;
+    }
+    if (!item) { res.writeHead(404); res.end(); return true; }
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${item.name}"`);
+    res.setHeader('Content-Length', item.bytes.length);
+    res.writeHead(200); res.end(req.method === 'HEAD' ? undefined : item.bytes); return true;
   }
   private gc() { for (const [id, v] of this.entries) if (v.expires <= this.now()) this.entries.delete(id); }
   add(bytes: Buffer, name: string): Artifact {

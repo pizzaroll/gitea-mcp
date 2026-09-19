@@ -4,6 +4,7 @@ import { FileRepository } from './repository.js';
 import { ChangeStore } from './store.js';
 import { ArtifactServer, downloadUpload } from './transfer.js';
 import { FileChangeService, type ExportInput, type PrepareInput } from './service.js';
+import type { IncomingMessage, ServerResponse } from 'node:http';
 
 const string = { type: 'string' };
 const digest = { type: 'string', pattern: '^[a-f0-9]{64}$' };
@@ -68,8 +69,10 @@ export class FileTransferRuntime {
       check(hosts.length > 0 && hosts.every(h => /^[a-z0-9]+(?:[.-][a-z0-9]+)*\.[a-z]{2,}$/.test(h)),
         'INVALID_CONFIG', 'Use exact lowercase upload hostnames, not wildcards or URLs');
       this.artifacts = new ArtifactServer(publicURL); this.store = new ChangeStore(directory);
-      try { await this.artifacts.listen(port, process.env.FILE_TRANSFER_HOST ?? '127.0.0.1'); }
-      catch { this.store.close(); throw new FileChangeError('LISTEN_FAILED', 'Cannot bind artifact listener'); }
+      if (process.env.FILE_TRANSFER_SHARED_HTTP !== 'true') {
+        try { await this.artifacts.listen(port, process.env.FILE_TRANSFER_HOST ?? '127.0.0.1'); }
+        catch { this.store.close(); throw new FileChangeError('LISTEN_FAILED', 'Cannot bind artifact listener'); }
+      }
       const repositories = new Map<string, FileRepository>();
       return new FileChangeService(this.store, instanceId => {
         const instance = loadConfig().gitea.instances.find(i => i.id === instanceId);
@@ -105,6 +108,9 @@ export class FileTransferRuntime {
         { code: 'FILE_TRANSFER_ERROR', message: 'Operation failed; inspect private server diagnostics without exposing credentials' };
       return { isError: true, content: [{ type: 'text' as const, text: JSON.stringify(safe) }] };
     }
+  }
+  handleArtifactRequest(req: IncomingMessage, res: ServerResponse): boolean {
+    return this.artifacts?.handleRequest(req, res) ?? false;
   }
   async close() { const service = await this.ready?.catch(() => undefined); await service?.drain(); await this.artifacts?.close(); this.store?.close(); }
 }

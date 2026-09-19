@@ -28,8 +28,8 @@
     "health-check": "./scripts/health-check.sh"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.0",
-    "axios": "^1.6.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "axios": "^1.20.0",
     "cross-fetch": "^4.0.0",
     "gitea-js": "^1.23.0",
     "ignore": "^7.0.5",

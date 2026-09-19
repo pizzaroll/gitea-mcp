@@ -1,11 +1,23 @@
 import { ConfigSchema, type Config, type GiteaInstance } from '../types/config.js';
+import { readFileSync } from 'node:fs';
+
+function configuredInstances(): unknown {
+  if (process.env.GITEA_INSTANCES) return JSON.parse(process.env.GITEA_INSTANCES) as unknown;
+  const baseUrl = process.env.GITEA_HOST;
+  const tokenFile = process.env.GITEA_ACCESS_TOKEN_FILE;
+  if (!baseUrl || !tokenFile) return [];
+  const token = readFileSync(tokenFile, { encoding: 'utf8', flag: 'r' }).trim();
+  if (!token) throw new Error('Empty Gitea token file');
+  return [{ id: process.env.GITEA_INSTANCE_ID ?? 'main', name: process.env.GITEA_INSTANCE_NAME ?? 'Gitea',
+    baseUrl, token }];
+}
 
 // Configuration is authoritative. Never log environment strings or fall back to embedded credentials.
 export function loadConfig(): Config {
   try {
     const config = ConfigSchema.parse({
       server: { logLevel: process.env.LOG_LEVEL, environment: process.env.NODE_ENV },
-      gitea: { instances: JSON.parse(process.env.GITEA_INSTANCES || '[]') as unknown,
+      gitea: { instances: configuredInstances(),
         defaultTimeout: Number(process.env.GITEA_TIMEOUT || '30000'),
         maxRetries: Number(process.env.GITEA_MAX_RETRIES || '3') },
       upload: { maxFileSize: Number(process.env.MAX_FILE_SIZE || '10485760'),

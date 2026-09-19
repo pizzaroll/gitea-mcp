@@ -20,85 +20,15 @@ interface RemoteFileInfo {
 export async function registerSyncUpdateTool(server: McpServer) {
   server.tool(
     'sync_update',
+    'Advanced tool for updating existing files in Gitea repository with conflict resolution',
     {
-      description: 'Advanced tool for updating existing files in Gitea repository with conflict resolution',
-      parameters: {
-        type: 'object',
-        properties: {
-          instanceId: {
-            type: 'string',
-            description: 'Gitea instance identifier'
-          },
-          owner: {
-            type: 'string',
-            description: 'Repository owner'
-          },
-          repository: {
-            type: 'string',
-            description: 'Repository name'
-          },
-          files: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                path: {
-                  type: 'string',
-                  description: 'File path in repository'
-                },
-                content: {
-                  type: 'string',
-                  description: 'File content (text, required for add/modify operations)'
-                },
-                operation: {
-                  type: 'string',
-                  enum: ['add', 'modify', 'delete'],
-                  description: 'Operation to perform: add (create new), modify (update existing), delete (remove)'
-                },
-                sha: {
-                  type: 'string',
-                  description: 'Current file SHA (required for modify/delete operations, auto-detected if not provided)'
-                }
-              },
-              required: ['path', 'operation']
-            },
-            minItems: 1,
-            description: 'Array of file operations to perform'
-          },
-          message: {
-            type: 'string',
-            description: 'Commit message'
-          },
-          branch: {
-            type: 'string',
-            default: 'main',
-            description: 'Target branch'
-          },
-          strategy: {
-            type: 'string',
-            enum: ['auto', 'batch', 'individual'],
-            default: 'auto',
-            description: 'Update strategy: auto (choose best), batch (single commit), individual (separate commits)'
-          },
-          conflictResolution: {
-            type: 'string',
-            enum: ['fail', 'overwrite', 'skip'],
-            default: 'fail',
-            description: 'How to handle conflicts when remote files have changed'
-          },
-          detectChanges: {
-            type: 'boolean',
-            default: true,
-            description: 'Compare with remote files to avoid unnecessary updates'
-          },
-          dryRun: {
-            type: 'boolean',
-            default: false,
-            description: 'Preview operations without making changes'
-          }
-        },
-        required: ['instanceId', 'owner', 'repository', 'files', 'message']
-      }
+      instanceId: z.string(), owner: z.string(), repository: z.string(),
+      files: z.array(z.object({ path: z.string(), content: z.string().optional(),
+        operation: z.enum(['add', 'modify', 'delete']), sha: z.string().optional() })).min(1),
+      message: z.string(), branch: z.string().default('main'),
+      strategy: z.enum(['auto', 'batch', 'individual']).default('auto'),
+      conflictResolution: z.enum(['fail', 'overwrite', 'skip']).default('fail'),
+      detectChanges: z.boolean().default(true), dryRun: z.boolean().default(false),
     },
     async (args) => {
       try {

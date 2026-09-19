@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { loadConfig } from '../build/config/index.js';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 test('actual stdio MCP preserves legacy tools and advertises native file bindings', async () => {
   const client = new Client({ name: 'file-transfer-regression', version: '1.0.0' });
@@ -39,4 +42,21 @@ test('configuration honors the environment and fails closed without exposing mal
     assert.throws(() => loadConfig(), error => { assert.ok(!error.message.includes('do-not-log')); return true; });
     process.env.GITEA_INSTANCES = '[]'; assert.throws(() => loadConfig());
   } finally { if (old === undefined) delete process.env.GITEA_INSTANCES; else process.env.GITEA_INSTANCES = old; }
+});
+test('single-instance configuration reads an existing mounted token file', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'gitea-mcp-token-'));
+  const tokenFile = join(directory, 'token'); writeFileSync(tokenFile, 'mounted-test-token\n');
+  const saved = Object.fromEntries(['GITEA_INSTANCES', 'GITEA_HOST', 'GITEA_ACCESS_TOKEN_FILE'].map(key => [key, process.env[key]]));
+  try {
+    delete process.env.GITEA_INSTANCES;
+    process.env.GITEA_HOST = 'https://gitea.example.test'; process.env.GITEA_ACCESS_TOKEN_FILE = tokenFile;
+    const instance = loadConfig().gitea.instances[0];
+    assert.equal(instance.id, 'main'); assert.equal(instance.baseUrl, 'https://gitea.example.test');
+    assert.equal(instance.token, 'mounted-test-token');
+  } finally {
+    for (const [key, value] of Object.entries(saved)) {
+      if (value === undefined) delete process.env[key]; else process.env[key] = value;
+    }
+    rmSync(directory, { recursive: true, force: true });
+  }
 });

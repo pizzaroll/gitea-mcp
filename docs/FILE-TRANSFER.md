@@ -38,10 +38,11 @@ References:
 
 ## Configuration and deployment
 
-This repository's existing executable uses **stdio MCP**. Keep the existing
-stdio-to-remote MCP gateway/hosting arrangement used by `@GIT`. The same Node
-process opens a small HTTP listener solely to serve expiring file capabilities;
-route it through your existing HTTPS reverse proxy. It is not another MCP server.
+The executable defaults to stdio MCP and also supports stateless Streamable HTTP
+at `/mcp` with `MCP_TRANSPORT=http`. In HTTP deployments, set
+`FILE_TRANSFER_SHARED_HTTP=true` to serve expiring file capabilities from the
+same listener and public origin. This is still one MCP process and one `@GIT`
+integration.
 
 Use Node 22 (CI validation runtime), install with `npm ci`, and build with
 `npm run build`. The implementation adds no npm runtime dependencies. The Python
@@ -62,6 +63,21 @@ export FILE_TRANSFER_PORT=8081
 export FILE_TRANSFER_UPLOAD_HOSTS=files.oaiusercontent.com
 npm start
 ```
+
+For a tunnel deployment on one port:
+
+```sh
+export MCP_TRANSPORT=http
+export MCP_HOST=0.0.0.0
+export MCP_PORT=8080
+export FILE_TRANSFER_SHARED_HTTP=true
+export FILE_TRANSFER_PUBLIC_URL=https://git-tools.example.com/file-transfer
+```
+
+`GITEA_INSTANCES` remains the general multi-instance configuration. A single
+instance may instead use `GITEA_HOST` plus `GITEA_ACCESS_TOKEN_FILE`; the latter
+is read directly from the mounted secret and is never copied into an environment
+variable.
 
 For a reverse proxy in another container, bind the artifact listener to
 `0.0.0.0` on a private container network instead of exposing it directly publicly.

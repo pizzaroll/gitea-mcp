@@ -2,6 +2,8 @@
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { createServer as createHttpServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
@@ -18,7 +20,7 @@ import ignore from 'ignore';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
-class GiteaMcpServer {
+export class GiteaMcpServer {
   private server: Server;
 
   constructor() {
@@ -32,8 +34,6 @@ class GiteaMcpServer {
     });
 
     this.setupToolHandlers();
-    this.server.onclose = () => { void fileTransferRuntime.close(); };
-    
     // Error handling
     this.server.onerror = (error) => {
       logger.error('[MCP Error]', error);
@@ -1159,11 +1159,74 @@ class GiteaMcpServer {
     }
   }
 
-  async run() {
+  async runStdio() {
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
     logger.info('Gitea MCP Server running on stdio');
   }
+
+  async connect(transport: StreamableHTTPServerTransport) { await this.server.connect(transport); }
+
+  async close() { await this.server.close(); }
+}
+
+const MAX_HTTP_BODY = 1_000_000;
+async function readJsonBody(req: IncomingMessage): Promise<unknown> {
+  const chunks: Buffer[] = []; let size = 0;
+  for await (const chunk of req) {
+    const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    size += bytes.length;
+    if (size > MAX_HTTP_BODY) throw new Error('Request body too large');
+    chunks.push(bytes);
+  }
+  return JSON.parse(Buffer.concat(chunks).toString('utf8')) as unknown;
+}
+
+function jsonError(res: ServerResponse, status: number, message: string) {
+  if (res.headersSent) return;
+  res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+  res.end(JSON.stringify({ jsonrpc: '2.0', error: { code: -32600, message }, id: null }));
+}
+
+async function handleMcpHttp(req: IncomingMessage, res: ServerResponse) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST'); jsonError(res, 405, 'Method not allowed'); return;
+  }
+  let body: unknown;
+  try { body = await readJsonBody(req); }
+  catch { jsonError(res, 400, 'Invalid JSON request'); return; }
+  const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+  const server = new GiteaMcpServer();
+  res.once('finish', () => {
+    void server.close().catch(error => logger.error('HTTP MCP close failed', { error }));
+  });
+  try {
+    await server.connect(transport);
+    await transport.handleRequest(req, res, body);
+  } catch (error) {
+    logger.error('HTTP MCP request failed', { error }); jsonError(res, 500, 'Internal server error');
+  }
+}
+
+async function runHttp() {
+  const host = process.env.MCP_HOST ?? '127.0.0.1';
+  const port = Number(process.env.MCP_PORT ?? '8080');
+  if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('Invalid MCP_PORT');
+  const http = createHttpServer((req, res) => {
+    if (fileTransferRuntime.handleArtifactRequest(req, res)) return;
+    const pathname = new URL(req.url ?? '/', 'http://localhost').pathname;
+    if (pathname === '/healthz' && req.method === 'GET') {
+      res.writeHead(200, { 'Content-Type': 'text/plain', 'Cache-Control': 'no-store' }); res.end('ok\n'); return;
+    }
+    if (pathname !== '/mcp') { res.writeHead(404, { 'Cache-Control': 'no-store' }); res.end(); return; }
+    void handleMcpHttp(req, res);
+  });
+  http.headersTimeout = 10_000; http.requestTimeout = 60_000; http.maxConnections = 64;
+  await new Promise<void>((resolve, reject) => {
+    const fail = (error: Error) => reject(error); http.once('error', fail);
+    http.listen(port, host, () => { http.off('error', fail); resolve(); });
+  });
+  logger.info('Gitea MCP Server running on Streamable HTTP', { host, port, endpoint: '/mcp' });
 }
 
 async function main() {
@@ -1174,8 +1237,10 @@ async function main() {
     // Set up global error handling
     setupErrorHandling();
 
-    const server = new GiteaMcpServer();
-    await server.run();
+    const transport = (process.env.MCP_TRANSPORT ?? 'stdio').toLowerCase();
+    if (transport === 'http') await runHttp();
+    else if (transport === 'stdio') await new GiteaMcpServer().runStdio();
+    else throw new Error('MCP_TRANSPORT must be stdio or http');
 
     logger.info("Gitea MCP Server started successfully", {
       version: "1.0.0",
