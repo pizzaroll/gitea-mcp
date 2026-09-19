@@ -1215,8 +1215,9 @@ async function runHttp() {
   const http = createHttpServer((req, res) => {
     if (fileTransferRuntime.handleArtifactRequest(req, res)) return;
     const pathname = new URL(req.url ?? '/', 'http://localhost').pathname;
-    if (pathname === '/healthz' && req.method === 'GET') {
-      res.writeHead(200, { 'Content-Type': 'text/plain', 'Cache-Control': 'no-store' }); res.end('ok\n'); return;
+    if ((pathname === '/' || pathname === '/healthz') && req.method === 'GET') {
+      res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' });
+      res.end(pathname === '/' ? 'Gitea MCP is running.\n' : 'ok\n'); return;
     }
     if (pathname !== '/mcp') { res.writeHead(404, { 'Cache-Control': 'no-store' }); res.end(); return; }
     void handleMcpHttp(req, res);

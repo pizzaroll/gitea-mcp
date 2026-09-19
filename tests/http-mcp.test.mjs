@@ -37,6 +37,8 @@ test('stateless Streamable HTTP endpoint preserves the complete tool surface', a
   const client = new Client({ name: 'http-regression', version: '1.0.0' });
   try {
     await waitForHealth(port, child);
+    const root = await fetch(`http://127.0.0.1:${port}/`);
+    assert.equal(root.status, 200); assert.equal(await root.text(), 'Gitea MCP is running.\n');
     const get = await fetch(`http://127.0.0.1:${port}/mcp`);
     assert.equal(get.status, 405); assert.equal(get.headers.get('allow'), 'POST');
     await client.connect(new StreamableHTTPClientTransport(new URL(`http://127.0.0.1:${port}/mcp`)));
