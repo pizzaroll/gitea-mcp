@@ -54,4 +54,3 @@ test('stateless Streamable HTTP endpoint preserves the complete tool surface', a
     await new Promise(resolve => child.once('exit', resolve));
   }
 });
-
