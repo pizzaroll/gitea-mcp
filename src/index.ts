@@ -1217,7 +1217,7 @@ async function runHttp() {
     const pathname = new URL(req.url ?? '/', 'http://localhost').pathname;
     if ((pathname === '/' || pathname === '/healthz') && req.method === 'GET') {
       res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' });
-      res.end(pathname === '/' ? 'Gitea MCP is running.\n' : 'ok\n'); return;
+      res.end(pathname === '/' ? 'I am running\n' : 'ok\n'); return;
     }
     if (pathname !== '/mcp') { res.writeHead(404, { 'Cache-Control': 'no-store' }); res.end(); return; }
     void handleMcpHttp(req, res);
@@ -1271,3 +1271,4 @@ main().catch((error) => {
   logger.error("Unhandled error in main", { error });
   process.exit(1);
 });
+
