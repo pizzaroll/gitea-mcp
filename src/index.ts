@@ -1271,4 +1271,3 @@ main().catch((error) => {
   logger.error("Unhandled error in main", { error });
   process.exit(1);
 });
-
